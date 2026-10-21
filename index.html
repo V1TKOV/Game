@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101512">
+  <meta name="description" content="Неоновая змейка: собирай еду, побей рекорд и играй с компьютера или телефона.">
+  <title>NEON SNAKE — маленькая игра, большой рекорд</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="game.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="./">◈ ARCADE CLUB</a><span class="edition">001 / БРАУЗЕРНЫЕ ИГРЫ</span></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow"><span></span> КЛАССИКА В НОВОМ СВЕТЕ</p>
+      <h1>NEON<br><em>SNAKE.</em></h1>
+      <p class="description">Ещё один поворот.<br>Ещё один рекорд.</p>
+      <p class="instructions">Собирай розовые огоньки, расти и не врезайся в стены или в себя. Всё просто. Пока не станет быстро.</p>
+      <div class="how"><span>01</span><p><strong>Выбери направление</strong><br>Стрелки, WASD или кнопки на экране</p></div>
+      <div class="how"><span>02</span><p><strong>Поймай свой ритм</strong><br>Пробел — пауза. Каждый огонёк — +10.</p></div>
+      <div class="tag">БЕЗ СКАЧИВАНИЯ <b>↗</b> БЕЗ РЕГИСТРАЦИИ</div>
+    </section>
+    <section class="game" aria-label="Игра Змейка">
+      <div class="scoreboard"><div><span>СЧЁТ</span><strong id="score">000</strong></div><div><span>ЛИЧНЫЙ РЕКОРД</span><strong id="best">000</strong></div><button id="pause" aria-label="Пауза" disabled>Ⅱ</button></div>
+      <div class="board">
+        <canvas id="canvas" width="600" height="600" aria-label="Игровое поле. Управление стрелками или экранными кнопками"></canvas>
+        <div id="overlay"><span class="symbol">↳</span><h2 id="title">Пойдём на рекорд?</h2><p id="message">Твоя следующая попытка может стать лучшей.</p><button id="start">Начать игру <span>↗</span></button></div>
+      </div>
+      <div class="game-footer"><span><i></i> <span id="status" role="status">ГОТОВ К СТАРТУ</span></span><span>СКОРОСТЬ <b id="speed">1×</b></span></div>
+      <div class="controls" aria-label="Управление"><button data-dir="up" aria-label="Вверх">↑</button><div><button data-dir="left" aria-label="Влево">←</button><button data-dir="down" aria-label="Вниз">↓</button><button data-dir="right" aria-label="Вправо">→</button></div></div>
+    </section>
+  </main>
+  <footer><span>МАЛЕНЬКИЙ ПЕРЕРЫВ. БОЛЬШАЯ ИГРА.</span><span>Сделано для удовольствия ✳</span></footer>
+</body>
+</html>
