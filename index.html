@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#091317">
+  <meta name="description" content="Охотник за аномалиями — лови светящихся существ жестами перед камерой.">
+  <title>Аномалия — охота начинается с жеста</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="game.js"></script>
+</head>
+<body>
+<header><a class="brand" href="./"><span class="brand-mark">◎</span> АНОМАЛИЯ<span class="brand-dot">®</span></a><span class="header-tag">ИНТЕРАКТИВНАЯ ЭКСПЕДИЦИЯ / 001</span><button id="sound" class="small-button" aria-pressed="false">Звук: выкл.</button></header>
+<main>
+  <div class="intro"><div><p class="eyebrow"><i></i> ПО ТУ СТОРОНУ ПРИВЫЧНОГО</p><h1>Они уже <em>рядом.</em></h1><p class="subtitle">Твоя комната. Неизвестные существа. Один точный жест.</p></div><div class="record"><span>ЛИЧНЫЙ РЕКОРД</span><strong id="best">0000</strong></div></div>
+  <section class="scanner" aria-label="Игровое поле">
+    <div class="toolbar"><span class="live"><i></i> <span id="mode-label">СКАНЕР ОЖИДАЕТ</span></span><div class="actions"><button id="pause" class="small-button" disabled>Пауза</button><button id="exit" class="small-button" hidden>Выйти</button></div></div>
+    <div class="stage" id="stage">
+      <video id="video" autoplay playsinline muted aria-hidden="true"></video>
+      <canvas id="canvas" aria-label="Существа и указатель руки. В пробном режиме нажмите и удерживайте существо." tabindex="0"></canvas>
+      <div class="corners" aria-hidden="true"></div>
+      <div class="hud" id="hud" hidden><div><span>ОЧКИ</span><strong id="score">0000</strong></div><div class="time"><span>ДО КОНЦА</span><strong id="time">60</strong></div><div><span>УРОВЕНЬ</span><strong id="level">01</strong></div></div>
+      <div class="overlay" id="overlay">
+        <div class="portal" aria-hidden="true"><div></div><span>✦</span></div>
+        <p class="eyebrow" id="modal-kicker">КОНТАКТ ВОЗМОЖЕН</p>
+        <h2 id="modal-title">Прикоснись к неизвестному</h2>
+        <p id="modal-text">Покажи ладонь камере. Наведи указатель на существо и соедини большой и указательный пальцы.</p>
+        <button class="primary" id="start">Включить камеру <span>↗</span></button>
+        <button class="text-button" id="demo">Сначала попробовать без камеры →</button>
+        <p class="privacy" id="privacy">Видео остаётся на твоём устройстве. Нужен доступ к камере.</p>
+      </div>
+      <div class="toast" id="toast" role="status" hidden></div>
+    </div>
+    <div class="scanner-footer"><span id="tracking" role="status"><i></i> ОЖИДАНИЕ КОНТАКТА</span><span id="caught">0 ПОЙМАНО</span></div>
+  </section>
+  <section class="guide" aria-label="Как играть"><article><span class="step">01 / ПОКАЖИ</span><h3>Рука — твой контроллер</h3><p>Поставь телефон на опору. Покажи одну ладонь целиком при хорошем освещении.</p></article><article><span class="step">02 / ПОЙМАЙ</span><h3>Один щипок. Есть контакт.</h3><p>Наведи круг на существо, соедини большой и указательный пальцы и удерживай до заполнения кольца.</p></article><article><span class="step">03 / ИССЛЕДУЙ</span><h3>Не все хотят быть пойманы</h3><p>После каждых пяти поимок — новый уровень. Быстрые ускользают, редкие требуют терпения.</p></article></section>
+  <section class="bestiary"><div class="section-label">ПОЛЕВОЙ СПРАВОЧНИК <span>03 ИЗВЕСТНЫХ ВИДА</span></div><div class="species"><article><span class="specimen mint">✦</span><div><h3>Искра <small>+100</small></h3><p>Любопытная. Захват за 0,4 с.</p></div><b>С УР. 1</b></article><article><span class="specimen coral">✳</span><div><h3>Беглец <small>+180</small></h3><p>Ускользает. Захват за 0,7 с.</p></div><b>С УР. 2</b></article><article><span class="specimen lavender">◈</span><div><h3>Призрак <small>+300</small></h3><p>Терпеливый. Захват за 1,6 с.</p></div><b>С УР. 3</b></article></div></section>
+</main>
+<footer><span>СМОТРИ ВНИМАТЕЛЬНЕЕ. МИР БОЛЬШЕ, ЧЕМ КАЖЕТСЯ.</span><span>60 секунд за гранью обычного ↗</span></footer>
+<noscript>Для игры нужно включить JavaScript в браузере.</noscript>
+</body>
+</html>
