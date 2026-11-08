@@ -1,30 +1,14 @@
 <!doctype html>
-<html lang="ru">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b151a"><meta name="description" content="Рисуй светом правой рукой, перемещай рисунки левой. Твоя студия в воздухе."><title>Эфир — рисуй в воздухе</title><link rel="stylesheet" href="style.css"><script type="module" src="game.js"></script></head>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#080b12"><meta name="description" content="Импульс — неоновая арена на выживание. Пять волн, рывки и улучшения. Играй на компьютере или телефоне."><title>ИМПУЛЬС — неоновая арена</title><link rel="stylesheet" href="style.css"><script type="module" src="game.js"></script></head>
 <body>
-<header><a href="./" class="brand"><span>◌</span> ЭФИР<sup>STUDIO</sup></a><span class="header-note">ВОЗДУХ — ТВОЙ ХОЛСТ</span><span class="edition">EXPERIMENT / 002</span></header>
-<main>
- <section class="intro"><div><p class="eyebrow"><i></i> СОЗДАВАЙ ТО, ЧЕГО ЕЩЁ НЕТ</p><h1>Оставь след <em>в воздухе.</em></h1><p>Рисуй правой. Перемещай левой. Отпускай — и смотри, как рисунок парит.</p></div><span class="intro-glyph" aria-hidden="true">✳</span></section>
- <section class="workspace" aria-label="Студия рисования">
-  <div class="topbar"><span id="mode">СТУДИЯ ОЖИДАЕТ</span><div><button id="calibrate" hidden>Настроить руки</button><button id="stop" hidden>Выключить камеру</button></div></div>
-  <div class="stage" id="stage">
-   <video id="video" playsinline muted autoplay aria-hidden="true"></video><canvas id="canvas" aria-label="Холст для рисования и перемещения объектов" tabindex="0"></canvas>
-   <div class="hand-labels" id="hand-labels" hidden><span id="right-status">ПРАВАЯ · НЕ ВИДНА</span><span id="left-status">ЛЕВАЯ · НЕ ВИДНА</span></div>
-   <div class="overlay" id="overlay">
-    <div class="orbit" aria-hidden="true"><span>〰</span></div><p class="eyebrow" id="kicker">ПРОСТРАНСТВО ДЛЯ ВООБРАЖЕНИЯ</p><h2 id="title">Твори без прикосновений</h2>
-    <p id="description">Соедини большой и указательный пальцы правой руки и рисуй светом. Левой рукой захвати рисунок и перенеси его.</p>
-    <button id="start" class="primary">Открыть камеру <span>↗</span></button><button id="demo" class="text-button">Попробовать мышью или пальцем →</button>
-    <p class="privacy" id="privacy">Видео обрабатывается на устройстве и не отправляется на сервер.</p>
-   </div>
-   <div id="hint" class="hint" role="status" hidden></div>
-  </div>
-  <div class="tools"><div class="palette" role="group" aria-label="Цвет линии"><button class="swatch selected" data-color="#b8f6d2" style="--swatch:#b8f6d2" aria-label="Мятный" aria-pressed="true"></button><button class="swatch" data-color="#9accff" style="--swatch:#9accff" aria-label="Голубой" aria-pressed="false"></button><button class="swatch" data-color="#dbb6ff" style="--swatch:#dbb6ff" aria-label="Сиреневый" aria-pressed="false"></button><button class="swatch" data-color="#ffafbd" style="--swatch:#ffafbd" aria-label="Розовый" aria-pressed="false"></button><button class="swatch" data-color="#ffe399" style="--swatch:#ffe399" aria-label="Золотой" aria-pressed="false"></button></div>
-   <label class="size">ЛИНИЯ <input id="size" type="range" min="2" max="12" value="5" aria-label="Толщина линии"></label><div class="tool-actions"><button id="new-object" title="Следующие штрихи будут отдельным рисунком">＋ Новый рисунок</button><button id="undo">↶ Отмена</button><button id="clear">Очистить</button><button id="save">Сохранить PNG ↗</button></div>
-  </div>
-  <div class="demo-tools" id="demo-tools" hidden><span>ПРОБНЫЙ РЕЖИМ</span><button id="draw-tool" aria-pressed="true" class="active">Рисовать</button><button id="move-tool" aria-pressed="false">Перемещать</button><button id="camera-tool">Включить камеру ↗</button></div>
-  <div class="statusbar"><span id="status" role="status">КАМЕРА ВЫКЛЮЧЕНА</span><span id="count">РИСУНКОВ: 0</span></div>
- </section>
- <section class="guide"><article><span class="number">01 / ПРАВАЯ РУКА</span><h3>Нарисуй свою мысль</h3><p>Щипок большим и указательным — рисование. Разомкни пальцы — пауза. Несколько штрихов складываются в один рисунок.</p></article><article><span class="number lavender">02 / ЛЕВАЯ РУКА</span><h3>Возьми её с собой</h3><p>Наведи левую руку на линию и сделай щипок. Двигай рисунок, удерживая пальцы. Разомкни — он останется на месте.</p></article><article><span class="number peach">03 / НОВАЯ ИДЕЯ</span><h3>Добавь ещё немного магии</h3><p>Нажми «Новый рисунок», чтобы создать отдельный объект. После захвата левой рукой следующий рисунок тоже будет новым.</p></article></section>
- <div class="note"><span>НА ЗАМЕТКУ</span><p>Поставь телефон на опору и держи обе руки в кадре. Рисунки закреплены на экране поверх камеры: если двигать телефон, они не останутся в той же точке комнаты.</p></div>
-</main><footer><span>НИЧЕГО ЛИШНЕГО. ТОЛЬКО ТЫ И ВООБРАЖЕНИЕ.</span><span>Made of light ↗</span></footer><noscript>Для студии нужен JavaScript.</noscript>
-</body></html>
+<header><a class="brand" href="./"><span class="brand-icon">ϟ</span> ИМПУЛЬС<span class="tag">ARCADE</span></a><nav><a href="studio/">Студия Эфир ↗</a><button id="sound" aria-pressed="false">Звук: выкл.</button></nav></header>
+<main><section class="intro"><div><p class="eyebrow"><span></span> ОДИН ПИЛОТ. ЦЕЛЫЙ РОЙ.</p><h1>Держи <em>ритм.</em><br>Выживи в хаосе.</h1><p class="subtitle">Двигайся. Уклоняйся. Становись сильнее.<br>Твой корабль позаботится о стрельбе.</p></div><div class="mission"><span>ПРОТОКОЛ / 001</span><strong>05 волн</strong><p>Одна арена. Никаких вторых жизней.</p></div></section>
+<section class="game-shell" aria-label="Игровая арена">
+<div class="hud"><div><span class="label">КОРПУС</span><div id="health" class="health" aria-label="Здоровье"></div></div><div class="wave"><span class="label">ВОЛНА</span><strong id="wave">01 <small>/ 05</small></strong></div><div class="score"><span class="label">СЧЁТ</span><strong id="score">000000</strong></div><button id="pause" aria-label="Пауза" disabled>Ⅱ</button></div>
+<div class="stage" id="stage"><canvas id="arena" tabindex="0" aria-label="Арена. Движение WASD или стрелками, рывок пробелом, пауза P или Escape."></canvas><div class="corner top-left"></div><div class="corner bottom-right"></div>
+<div id="banner" class="banner" role="status"></div>
+<div id="overlay" class="overlay"><div id="menu" class="panel"><div class="sigil" aria-hidden="true">ϟ</div><p class="eyebrow">СИСТЕМА ГОТОВА</p><h2>Включай импульс.</h2><p>Пройди пять волн и уничтожь ядро роя.<br>Собирай энергию. Выбирай улучшения.</p><button id="start" class="primary">Начать забег <span>↗</span></button><span class="menu-hint">WASD / СТРЕЛКИ — ДВИЖЕНИЕ · ПРОБЕЛ — РЫВОК</span><p class="record">ЛУЧШИЙ РЕЗУЛЬТАТ <b id="best">0</b></p></div></div>
+<div class="touch-controls" id="touch-controls"><div id="joystick" aria-label="Джойстик движения"><div id="stick"></div></div><button id="dash-touch" aria-label="Рывок">ϟ<span>РЫВОК</span></button></div>
+</div><div class="arena-footer"><span><i></i> <span id="status">ОЖИДАНИЕ ПИЛОТА</span></span><div class="dash-meter"><span>РЫВОК</span><div><i id="dash-fill"></i></div><kbd>SPACE</kbd></div><span id="timer">00:00</span></div></section>
+<section class="guide"><article><span>01 <i>↗</i></span><h3>Не останавливайся</h3><p>WASD или стрелки. На телефоне — джойстик. Оружие само выбирает ближайшую цель.</p></article><article><span>02 <i>ϟ</i></span><h3>Проходи сквозь опасность</h3><p>Пробел включает рывок и ненадолго защищает от урона. Две секунды — и он снова готов.</p></article><article><span>03 <i>✧</i></span><h3>Собери свою сборку</h3><p>Подбирай голубую энергию. С каждым уровнем выбирай одно из трёх усилений корабля.</p></article></section>
+</main><footer><span>СДЕЛАНО ДЛЯ ЕЩЁ ОДНОГО ЗАБЕГА.</span><span>БЕЗ УСТАНОВКИ · БЕЗ КАМЕРЫ</span></footer><noscript>Для игры включи JavaScript.</noscript></body></html>
