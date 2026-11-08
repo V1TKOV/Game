@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b151a"><meta name="description" content="Рисуй светом правой рукой, перемещай рисунки левой. Твоя студия в воздухе."><title>Эфир — рисуй в воздухе</title><link rel="stylesheet" href="style.css"><script type="module" src="game.js"></script></head>
+<body>
+<header><a href="./" class="brand"><span>◌</span> ЭФИР<sup>STUDIO</sup></a><span class="header-note">ВОЗДУХ — ТВОЙ ХОЛСТ</span><span class="edition">EXPERIMENT / 002</span></header>
+<main>
+ <section class="intro"><div><p class="eyebrow"><i></i> СОЗДАВАЙ ТО, ЧЕГО ЕЩЁ НЕТ</p><h1>Оставь след <em>в воздухе.</em></h1><p>Рисуй правой. Перемещай левой. Отпускай — и смотри, как рисунок парит.</p></div><span class="intro-glyph" aria-hidden="true">✳</span></section>
+ <section class="workspace" aria-label="Студия рисования">
+  <div class="topbar"><span id="mode">СТУДИЯ ОЖИДАЕТ</span><div><button id="calibrate" hidden>Настроить руки</button><button id="stop" hidden>Выключить камеру</button></div></div>
+  <div class="stage" id="stage">
+   <video id="video" playsinline muted autoplay aria-hidden="true"></video><canvas id="canvas" aria-label="Холст для рисования и перемещения объектов" tabindex="0"></canvas>
+   <div class="hand-labels" id="hand-labels" hidden><span id="right-status">ПРАВАЯ · НЕ ВИДНА</span><span id="left-status">ЛЕВАЯ · НЕ ВИДНА</span></div>
+   <div class="overlay" id="overlay">
+    <div class="orbit" aria-hidden="true"><span>〰</span></div><p class="eyebrow" id="kicker">ПРОСТРАНСТВО ДЛЯ ВООБРАЖЕНИЯ</p><h2 id="title">Твори без прикосновений</h2>
+    <p id="description">Соедини большой и указательный пальцы правой руки и рисуй светом. Левой рукой захвати рисунок и перенеси его.</p>
+    <button id="start" class="primary">Открыть камеру <span>↗</span></button><button id="demo" class="text-button">Попробовать мышью или пальцем →</button>
+    <p class="privacy" id="privacy">Видео обрабатывается на устройстве и не отправляется на сервер.</p>
+   </div>
+   <div id="hint" class="hint" role="status" hidden></div>
+  </div>
+  <div class="tools"><div class="palette" role="group" aria-label="Цвет линии"><button class="swatch selected" data-color="#b8f6d2" style="--swatch:#b8f6d2" aria-label="Мятный" aria-pressed="true"></button><button class="swatch" data-color="#9accff" style="--swatch:#9accff" aria-label="Голубой" aria-pressed="false"></button><button class="swatch" data-color="#dbb6ff" style="--swatch:#dbb6ff" aria-label="Сиреневый" aria-pressed="false"></button><button class="swatch" data-color="#ffafbd" style="--swatch:#ffafbd" aria-label="Розовый" aria-pressed="false"></button><button class="swatch" data-color="#ffe399" style="--swatch:#ffe399" aria-label="Золотой" aria-pressed="false"></button></div>
+   <label class="size">ЛИНИЯ <input id="size" type="range" min="2" max="12" value="5" aria-label="Толщина линии"></label><div class="tool-actions"><button id="new-object" title="Следующие штрихи будут отдельным рисунком">＋ Новый рисунок</button><button id="undo">↶ Отмена</button><button id="clear">Очистить</button><button id="save">Сохранить PNG ↗</button></div>
+  </div>
+  <div class="demo-tools" id="demo-tools" hidden><span>ПРОБНЫЙ РЕЖИМ</span><button id="draw-tool" aria-pressed="true" class="active">Рисовать</button><button id="move-tool" aria-pressed="false">Перемещать</button><button id="camera-tool">Включить камеру ↗</button></div>
+  <div class="statusbar"><span id="status" role="status">КАМЕРА ВЫКЛЮЧЕНА</span><span id="count">РИСУНКОВ: 0</span></div>
+ </section>
+ <section class="guide"><article><span class="number">01 / ПРАВАЯ РУКА</span><h3>Нарисуй свою мысль</h3><p>Щипок большим и указательным — рисование. Разомкни пальцы — пауза. Несколько штрихов складываются в один рисунок.</p></article><article><span class="number lavender">02 / ЛЕВАЯ РУКА</span><h3>Возьми её с собой</h3><p>Наведи левую руку на линию и сделай щипок. Двигай рисунок, удерживая пальцы. Разомкни — он останется на месте.</p></article><article><span class="number peach">03 / НОВАЯ ИДЕЯ</span><h3>Добавь ещё немного магии</h3><p>Нажми «Новый рисунок», чтобы создать отдельный объект. После захвата левой рукой следующий рисунок тоже будет новым.</p></article></section>
+ <div class="note"><span>НА ЗАМЕТКУ</span><p>Поставь телефон на опору и держи обе руки в кадре. Рисунки закреплены на экране поверх камеры: если двигать телефон, они не останутся в той же точке комнаты.</p></div>
+</main><footer><span>НИЧЕГО ЛИШНЕГО. ТОЛЬКО ТЫ И ВООБРАЖЕНИЕ.</span><span>Made of light ↗</span></footer><noscript>Для студии нужен JavaScript.</noscript>
+</body></html>

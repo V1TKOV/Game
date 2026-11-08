@@ -1,143 +1,64 @@
-import {Studio,Gestures,coverMap,mapPoint,pinchRatio} from './engine.js';
-const $=id=>document.getElementById(id),canvas=$('canvas'),ctx=canvas.getContext('2d'),video=$('video'),stage=$('stage');
-const ui=Object.fromEntries(['overlay','title','description','kicker','start','demo','privacy','mode','calibrate','stop','hint','status','count','hand-labels','right-status','left-status','demo-tools','draw-tool','move-tool','camera-tool','new-object','undo','clear','save','size'].map(id=>[id,$(id)]));
-let width=1,height=1,state='ready',stream=null,detector=null,modelPromise=null,session=0,lastVideoTime=-1,lastDetect=0,lastSeen=0;
-const studio=new Studio(1,1),gestures=new Gestures(studio);
-let rightCategory=null,hands=[],right=null,left=null,hintExpiry=0,tool='draw',pointerId=null,oldStatus='',undoCount=-1,calibrationFrames=0,calibrationLabel=null;
+import {W,H,setWorld,createGame,update,dash,upgrades,chooseUpgrade,clamp} from './engine.js';
+const $=id=>document.getElementById(id),canvas=$('arena'),ctx=canvas.getContext('2d');
+let game=createGame(),mode='menu',last=0,keys=new Set(),stick={x:0,y:0},best=0,sound=false,audio,previousKills=0,previousHp=5,joystickId=null;
 const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-function resize(){const r=stage.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);width=r.width;height=r.height;canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);studio.resize(width,height);gestures.reset();right=null;left=null;}
-new ResizeObserver(resize).observe(stage);resize();
-function setStatus(text){if(text!==oldStatus){ui.status.textContent=text;oldStatus=text;}}
-function hint(text,seconds=3){ui.hint.textContent=text;ui.hint.hidden=false;hintExpiry=performance.now()+seconds*1000;}
-function releaseHands(){gestures.reset();right=null;left=null;hands=[];}
-function stopStream(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;releaseHands();}
-function modal(title,text,button){ui.title.textContent=title;ui.description.textContent=text;ui.start.textContent=button;ui.start.disabled=false;ui.overlay.hidden=false;}
-function enableTools(enabled){for(const id of ['new-object','undo','clear','save'])ui[id].disabled=!enabled;}
-async function loadModel(){
- if(detector)return detector;if(modelPromise)return modelPromise;
- let timeout,expired=false;
- const loading=(async()=>{const{FilesetResolver,HandLandmarker}=await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs');const files=await FilesetResolver.forVisionTasks('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm');return HandLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'CPU'},runningMode:'VIDEO',numHands:2,minHandDetectionConfidence:.6,minHandPresenceConfidence:.6,minTrackingConfidence:.5});})();
- loading.then(value=>{if(expired)value.close();},()=>{});
- modelPromise=Promise.race([loading,new Promise((_,reject)=>{timeout=setTimeout(()=>{expired=true;reject(new Error('MODEL_TIMEOUT'));},35000);})]);
- try{detector=await modelPromise;return detector;}finally{clearTimeout(timeout);modelPromise=null;}
+try{best=Number(localStorage.getItem('impulse-best'))||0;}catch{}
+$('best').textContent=best;
+function tone(freq=300,duration=.06){if(!sound)return;try{audio??=new AudioContext();audio.resume();const o=audio.createOscillator(),gain=audio.createGain();o.type='triangle';o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq/2,audio.currentTime+duration);gain.gain.setValueAtTime(.045,audio.currentTime);gain.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(gain).connect(audio.destination);o.start();o.stop(audio.currentTime+duration);}catch{}}
+$('sound').onclick=()=>{sound=!sound;$('sound').textContent=`Звук: ${sound?'вкл.':'выкл.'}`;$('sound').setAttribute('aria-pressed',sound);tone(550);};
+function input(){return{x:(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0)+stick.x,y:(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0)+stick.y};}
+function clearInput(){keys.clear();stick={x:0,y:0};joystickId=null;$('stick').style.transform='';}
+function overlay(html){$('menu').innerHTML=html;$('overlay').hidden=false;$('stage').classList.remove('playing');clearInput();$('menu').querySelector('button')?.focus({preventScroll:true});}
+function hideOverlay(){ $('overlay').hidden=true;$('stage').classList.add('playing');canvas.focus({preventScroll:true});}
+function start(){game=createGame();mode='playing';previousKills=0;previousHp=5;hideOverlay();$('pause').disabled=false;tone(650,.12);}
+$('start').onclick=start;
+function pause(){if(mode!=='playing')return;game.state='paused';mode='paused';overlay('<p class="eyebrow">СИГНАЛ ПРИОСТАНОВЛЕН</p><h2>Передышка.</h2><p>Арена подождёт. Продолжим, когда будешь готов.</p><button class="primary" id="resume">Продолжить ↗</button>');$('resume').onclick=()=>{game.state='playing';mode='playing';hideOverlay();};}
+$('pause').onclick=pause;
+window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)&&mode==='playing')e.preventDefault();keys.add(e.code);if(e.repeat)return;if(e.code==='Space'&&mode==='playing'){if(dash(game,input()))tone(170,.15);}if(e.code==='Escape'||e.code==='KeyP'){if(mode==='playing')pause();else if(mode==='paused')$('resume').click();}});
+window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{clearInput();pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden){clearInput();pause();}});
+function moveStick(e){const r=$('joystick').getBoundingClientRect(),x=(e.clientX-r.left-r.width/2)/35,y=(e.clientY-r.top-r.height/2)/35,n=Math.max(1,Math.hypot(x,y));stick={x:x/n,y:y/n};$('stick').style.transform=`translate(${stick.x*30}px,${stick.y*30}px)`;}
+$('joystick').addEventListener('pointerdown',e=>{if(joystickId!==null)return;joystickId=e.pointerId;e.currentTarget.setPointerCapture(e.pointerId);moveStick(e);});
+$('joystick').addEventListener('pointermove',e=>{if(e.pointerId===joystickId)moveStick(e);});
+for(const event of ['pointerup','pointercancel','lostpointercapture'])$('joystick').addEventListener(event,e=>{if(e.pointerId===joystickId){joystickId=null;stick={x:0,y:0};$('stick').style.transform='';}});
+$('dash-touch').addEventListener('pointerdown',e=>{e.preventDefault();if(dash(game,input()))tone(170,.15);});
+function showUpgrades(){mode='upgrade';const options=[...upgrades];for(let i=options.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[options[i],options[j]]=[options[j],options[i]];}
+ overlay(`<p class="eyebrow">УРОВЕНЬ ${game.level} · ВЫБЕРИ УСИЛЕНИЕ</p><h2>Следующий импульс.</h2><p>Одно решение. Больше возможностей.</p><div class="upgrades">${options.slice(0,3).map(u=>`<button class="upgrade" data-upgrade="${u.id}"><span class="icon">${u.icon}</span><b>${u.name}</b><small>${u.text}</small></button>`).join('')}</div>`);
+ for(const button of document.querySelectorAll('[data-upgrade]'))button.onclick=()=>{chooseUpgrade(game,button.dataset.upgrade);mode='playing';hideOverlay();tone(800,.12);};
 }
-function errorText(error){
- if(error.name==='NotAllowedError')return 'Доступ к камере не разрешён. Разреши его в настройках сайта и повтори попытку. Пока можно рисовать в пробном режиме.';
- if(error.name==='NotFoundError')return 'Камера не найдена. Подключи её или попробуй управление мышью и пальцем.';
- if(error.name==='NotReadableError')return 'Камера занята или недоступна. Закрой другие приложения с камерой и попробуй снова.';
- if(error.message==='INSECURE')return 'Открой студию по HTTPS, например на GitHub Pages. На компьютере также подходит localhost. Камера не запускается из файла.';
- return 'Не удалось запустить распознавание рук. Проверь интернет и открой сайт в актуальном Safari или Chrome. Рисунки сохранены на холсте — можно продолжить без камеры.';
+function finish(){mode=game.state;const won=mode==='won';best=Math.max(best,game.score);try{localStorage.setItem('impulse-best',best);}catch{}$('pause').disabled=true;
+ overlay(`<div class="sigil">${won?'✧':'ϟ'}</div><p class="eyebrow">${won?'ЯДРО РОЯ УНИЧТОЖЕНО':'СИГНАЛ ПОТЕРЯН'}</p><h2>${won?'Хаос под контролем.':'Ещё один импульс?'}</h2><p>Счёт: <b>${game.score.toLocaleString('ru-RU')}</b> · Волна ${game.wave}/5 · ${time(game.time)}<br>Уничтожено: ${game.kills} · Рекорд: ${best.toLocaleString('ru-RU')}</p><button class="primary" id="restart">Новый забег <span>↗</span></button>`);$('restart').onclick=start;tone(won?850:100,.35);
 }
-function fail(error){++session;stopStream();state='error';ui.overlay.classList.remove('calibration');ui.demo.hidden=false;ui.privacy.hidden=false;ui.calibrate.hidden=true;ui['hand-labels'].hidden=true;ui.stop.hidden=false;ui.mode.textContent='КАМЕРА НЕДОСТУПНА';ui.hint.hidden=true;setStatus('КАМЕРА ВЫКЛЮЧЕНА');modal('Контакт не установлен',errorText(error),'Попробовать снова ↗');enableTools(false);}
-async function startCamera(){
- if(state==='loading')return;
- const current=++session;stopStream();state='loading';ui.overlay.classList.remove('calibration');ui.demo.hidden=true;ui.privacy.hidden=false;ui['demo-tools'].hidden=true;ui.stop.hidden=false;ui.stop.textContent='Отменить';ui.calibrate.hidden=true;ui['hand-labels'].hidden=true;enableTools(false);
- modal('Открываем пространство','Разреши доступ к фронтальной камере. Первая загрузка распознавания может занять до 35 секунд.','Подключаемся…');ui.start.disabled=true;ui.mode.textContent='ПОДКЛЮЧЕНИЕ';
- try{
-  if(!isSecureContext||location.protocol==='file:')throw new Error('INSECURE');
-  if(!navigator.mediaDevices?.getUserMedia)throw new Error('UNSUPPORTED');
-  const acquired=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});
-  if(current!==session){acquired.getTracks().forEach(t=>t.stop());return;}
-  stream=acquired;video.srcObject=stream;await video.play();if(current!==session)return;
-  ui.start.textContent='Загружаем распознавание…';await loadModel();if(current!==session)return;
-  stream.getVideoTracks()[0].addEventListener('ended',()=>{if(['camera','calibration','paused'].includes(state))fail(new Error('CAMERA_ENDED'));},{once:true});
-  lastVideoTime=-1;lastDetect=0;lastSeen=0;calibrate();
- }catch(error){if(current===session)fail(error);}
+function time(n){return`${String(Math.floor(n/60)).padStart(2,'0')}:${String(Math.floor(n%60)).padStart(2,'0')}`;}
+function resize(){const r=canvas.getBoundingClientRect();if(!r.width||!r.height)return;const dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);
+ const oldW=W,oldH=H,newW=r.width<600?660:1100;setWorld(newW,newW*r.height/r.width);
+ for(const entity of [game.player,...game.enemies,...game.bullets,...game.gems,...game.particles]){entity.x*=W/oldW;entity.y*=H/oldH;}
 }
-function calibrate(){
- if(!stream)return;state='calibration';releaseHands();calibrationFrames=0;calibrationLabel=null;ui.overlay.classList.add('calibration');ui.demo.hidden=true;ui.privacy.hidden=true;ui.calibrate.hidden=true;ui.stop.hidden=false;ui.stop.textContent='Выключить камеру';ui['hand-labels'].hidden=true;ui.hint.hidden=true;enableTools(false);
- ui.mode.textContent='НАСТРОЙКА РУК';modal('Покажи только правую ладонь','Держи правую ладонь раскрытой в кадре, а левую убери. Затем нажми кнопку — мы запомним, какая рука рисует.','Ждём правую ладонь…');ui.start.disabled=true;setStatus('ПОКАЖИ ОДНУ РАСКРЫТУЮ ЛАДОНЬ');
+new ResizeObserver(resize).observe(canvas);resize();
+function poly(x,y,r,sides,angle,color,fill){ctx.beginPath();for(let i=0;i<sides;i++){const a=angle+i*Math.PI*2/sides;i?ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r):ctx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.6;ctx.stroke();}
+function render(now){
+ // Uniform scale preserves collision geometry at every screen aspect ratio.
+ const scale=Math.min(canvas.width/W,canvas.height/H),ox=(canvas.width-W*scale)/2,oy=(canvas.height-H*scale)/2;
+ ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#080e19';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.setTransform(scale,0,0,scale,ox,oy);
+ const grad=ctx.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,650);grad.addColorStop(0,'#132333');grad.addColorStop(1,'#080e19');ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle='#6d97ab0b';ctx.lineWidth=1;for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+ ctx.strokeStyle='#38526155';ctx.strokeRect(1,1,W-2,H-2);
+ for(let i=0;i<55;i++){const x=(i*179.3)%W,y=(i*97.7)%H;ctx.fillStyle=`rgba(137,189,213,${.12+(reduced?0:Math.sin(now*.0007+i)*.09)})`;ctx.fillRect(x,y,2,2);}
+ if(mode==='menu'){const t=reduced?0:now*.0003;for(let i=0;i<7;i++){const a=i*6.28/7+t;poly(W/2+Math.cos(a)*380,H/2+Math.sin(a)*200,10+i%3*4,4,a,'#ff6b8c66','#ff6b8c0a');}poly(200,300,15,3,-Math.PI/2,'#c7ff6b88','#c7ff6b22');return;}
+ for(const gem of game.gems){ctx.shadowBlur=reduced?0:12;ctx.shadowColor='#6ee7f5';poly(gem.x,gem.y,5,4,0,'#a2f7ff','#6ee7f599');}ctx.shadowBlur=0;
+ for(const b of game.bullets){ctx.fillStyle=b.enemy?'#ff879f':'#d6ff8f';ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=reduced?0:10;ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);ctx.fill();}ctx.shadowBlur=0;
+ for(const e of game.enemies){const color=e.type==='shooter'?'#c297ff':e.type==='boss'?'#ffcc70':'#ff6b8c';poly(e.x,e.y,e.r,e.type==='fast'?3:e.type==='boss'?6:4,e.phase,color,color+'20');ctx.fillStyle=color;ctx.fillRect(e.x-2,e.y-2,4,4);if(e.hp<e.maxHp){ctx.fillStyle='#303747';ctx.fillRect(e.x-e.r,e.y-e.r-8,e.r*2,3);ctx.fillStyle=color;ctx.fillRect(e.x-e.r,e.y-e.r-8,e.r*2*e.hp/e.maxHp,3);}}
+ for(const p of game.particles){ctx.globalAlpha=clamp(p.life*2,0,1);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,3,3);}ctx.globalAlpha=1;
+ const p=game.player;if(p.inv<=0||Math.floor(now/80)%2===0){const a=Math.atan2(p.dy,p.dx);ctx.save();ctx.translate(p.x,p.y);ctx.rotate(a);ctx.shadowBlur=reduced?0:20;ctx.shadowColor='#c7ff6b';ctx.beginPath();ctx.moveTo(16,0);ctx.lineTo(-10,-10);ctx.lineTo(-5,0);ctx.lineTo(-10,10);ctx.closePath();ctx.fillStyle='#c7ff6b';ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#6ee7f5';ctx.beginPath();ctx.moveTo(-9,-4);ctx.lineTo(-20-(reduced?0:Math.sin(now*.04)*5),0);ctx.lineTo(-9,4);ctx.fill();ctx.restore();}
+ if(p.dashTime>0){ctx.strokeStyle='#b7fbffaa';ctx.beginPath();ctx.arc(p.x,p.y,24,0,Math.PI*2);ctx.stroke();}
+ ctx.fillStyle='#1e3441';ctx.fillRect(0,H-3,W,3);ctx.fillStyle='#6ee7f5';ctx.fillRect(0,H-3,W*Math.min(1,game.xp/game.nextXp),3);
 }
-function confirmCalibration(){
- if(state!=='calibration'||calibrationFrames<4||hands.length!==1||performance.now()-lastSeen>250)return;
- rightCategory=hands[0].label;state='camera';releaseHands();ui.overlay.hidden=true;ui.overlay.classList.remove('calibration');ui['hand-labels'].hidden=false;ui.calibrate.hidden=false;ui.stop.textContent='Выключить камеру';ui.mode.textContent='КАМЕРА · РИСОВАНИЕ В ВОЗДУХЕ';enableTools(true);hint('Правая рисует щипком. Левая захватывает линию.',5);
+function frame(now){const dt=last?Math.min((now-last)/1000,.04):0;last=now;
+ if(mode==='playing'){update(game,dt,input());if(game.kills>previousKills){tone(400,.05);previousKills=game.kills;}if(game.player.hp<previousHp){tone(100,.2);}previousHp=game.player.hp;
+ if(game.state==='upgrade')showUpgrades();else if(game.state==='won'||game.state==='lost')finish();}
+ $('health').innerHTML=Array.from({length:game.player.maxHp},(_,i)=>`<i class="${i>=game.player.hp?'empty':''}"></i>`).join('');$('health').setAttribute('aria-label',`Корпус: ${Math.max(0,game.player.hp)} из ${game.player.maxHp}`);
+ $('wave').innerHTML=`${String(game.wave).padStart(2,'0')} <small>/ 05</small>`;$('score').textContent=String(game.score).padStart(6,'0');$('timer').textContent=time(game.time);$('dash-fill').style.width=`${(1-game.player.dash/2)*100}%`;
+ $('status').textContent=mode==='menu'?'ОЖИДАНИЕ ПИЛОТА':mode==='playing'?`УРОВЕНЬ ${game.level} · ЭНЕРГИЯ ${game.xp}/${game.nextXp}`:mode==='upgrade'?'ВЫБОР УСИЛЕНИЯ':mode==='paused'?'ПАУЗА':mode==='won'?'МИССИЯ ВЫПОЛНЕНА':'ЗАБЕГ ЗАВЕРШЁН';
+ $('banner').textContent=mode==='playing'&&game.banner>0?(game.wave===5&&game.bossSpawned?'⚠ ЯДРО РОЯ':`ВОЛНА ${String(game.wave).padStart(2,'0')}`):'';
+ render(now);requestAnimationFrame(frame);
 }
-function demo(){++session;stopStream();state='demo';ui.overlay.hidden=true;ui.overlay.classList.remove('calibration');ui['demo-tools'].hidden=false;ui['hand-labels'].hidden=true;ui.calibrate.hidden=true;ui.stop.hidden=true;ui.mode.textContent='ПРОБНЫЙ РЕЖИМ · БЕЗ КАМЕРЫ';enableTools(true);selectTool('draw');setStatus('РИСУЙ МЫШЬЮ ИЛИ ПАЛЬЦЕМ');hint('Рисуй на холсте. Для переноса выбери «Перемещать».',4);}
-function stop(){++session;stopStream();state='ready';ui.overlay.classList.remove('calibration');ui.calibrate.hidden=true;ui.stop.hidden=true;ui.demo.hidden=false;ui.privacy.hidden=false;ui['hand-labels'].hidden=true;ui['demo-tools'].hidden=true;ui.mode.textContent='КАМЕРА ВЫКЛЮЧЕНА';ui.hint.hidden=true;setStatus('РИСУНКИ ОСТАЛИСЬ НА ХОЛСТЕ');enableTools(false);modal('Пространство ждёт тебя','Рисунки остаются здесь до перезагрузки страницы. Включи камеру или продолжай в пробном режиме.','Открыть камеру ↗');}
-function pause(){if(!['camera','calibration'].includes(state))return;state='paused';releaseHands();ui.overlay.classList.remove('calibration');ui.demo.hidden=false;ui.privacy.hidden=true;ui.calibrate.hidden=true;enableTools(false);modal('Небольшая пауза','Рисование остановлено. Чтобы выключить камеру, нажми кнопку над холстом.','Продолжить ↗');}
-function resume(){if(!stream){startCamera();return;}if(!rightCategory){calibrate();return;}state='camera';releaseHands();ui.overlay.hidden=true;ui.calibrate.hidden=false;ui['hand-labels'].hidden=false;enableTools(true);hint('Разомкни пальцы перед следующим жестом.',2);}
-function detect(now){
- if(!detector||video.readyState<2)return;
- if(now-lastDetect>=50&&video.currentTime!==lastVideoTime){
-  lastDetect=now;lastVideoTime=video.currentTime;const result=detector.detectForVideo(video,now);
-  const candidates=result.landmarks.map((points,i)=>({points,label:result.handedness[i]?.[0]?.categoryName,score:result.handedness[i]?.[0]?.score||0})).filter(h=>h.label&&h.score>.65);
-  // Ambiguous duplicate handedness cannot safely control two separate roles.
-  hands=candidates.length===2&&candidates[0].label===candidates[1].label?[]:candidates;
-  lastSeen=now;
-  if(state==='calibration'){
-   const valid=hands.length===1&&pinchRatio(hands[0].points,video.videoWidth,video.videoHeight)>.65;
-   if(valid&&calibrationLabel===hands[0].label)calibrationFrames++;else{calibrationFrames=valid?1:0;calibrationLabel=valid?hands[0].label:null;}
-   ui.start.disabled=calibrationFrames<4;ui.start.textContent=calibrationFrames>=4?'Это моя правая рука ✓':hands.length>1?'Убери левую руку из кадра':'Покажи раскрытую правую ладонь';
-  }else{
-   right=handFor(hands.find(h=>h.label===rightCategory),right,'right');left=handFor(hands.find(h=>h.label!==rightCategory),left,'left');
-  }
- }
- if(now-lastSeen>250){hands=[];right=null;left=null;if(state==='calibration'){calibrationFrames=0;ui.start.disabled=true;}}
-}
-function handFor(hand,previous,side){
- if(!hand)return null;const points=hand.points;
- const raw=side==='right'?points[8]:{x:(points[4].x+points[8].x)/2,y:(points[4].y+points[8].y)/2};
- const p=mapPoint(raw,video.videoWidth,video.videoHeight,width,height),ratio=pinchRatio(points,video.videoWidth,video.videoHeight);
- return{x:previous?.visible?previous.x*.3+p.x*.7:p.x,y:previous?.visible?previous.y*.3+p.y*.7:p.y,visible:p.x>0&&p.x<width&&p.y>0&&p.y<height,closed:previous?.closed?ratio<.5:ratio<.32,points};
-}
-function renderObjects(context,glow=true){
- context.save();context.lineCap='round';context.lineJoin='round';
- for(const object of studio.objects){for(const stroke of object.strokes){
-  context.strokeStyle=stroke.color;context.fillStyle=stroke.color;context.lineWidth=stroke.size;context.shadowColor=stroke.color;context.shadowBlur=glow?(object===studio.grab?24:13):0;
-  if(stroke.points.length===1){const p=stroke.points[0];context.beginPath();context.arc(p.x,p.y,stroke.size/2,0,Math.PI*2);context.fill();continue;}
-  context.beginPath();stroke.points.forEach((p,i)=>i?context.lineTo(p.x,p.y):context.moveTo(p.x,p.y));context.stroke();
-  if(glow){context.shadowBlur=0;context.globalAlpha=.55;context.strokeStyle='#ffffff';context.lineWidth=Math.max(1,stroke.size*.24);context.stroke();context.globalAlpha=1;}
- }}context.restore();
-}
-function skeleton(points,color){ctx.strokeStyle=color+'50';ctx.lineWidth=1.2;for(const chain of [[0,1,2,3,4],[0,5,6,7,8],[5,9,10,11,12],[9,13,14,15,16],[13,17,18,19,20],[0,17]]){ctx.beginPath();chain.forEach((index,i)=>{const p=mapPoint(points[index],video.videoWidth,video.videoHeight,width,height);i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);});ctx.stroke();}}
-function reticle(hand,color,label){if(!hand?.visible)return;ctx.save();ctx.translate(hand.x,hand.y);ctx.strokeStyle=color;ctx.lineWidth=2;ctx.setLineDash(hand.closed?[]:[3,4]);ctx.beginPath();ctx.arc(0,0,hand.closed?12:20,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=color;ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();ctx.font='10px Arial';ctx.textAlign='center';ctx.fillText(label,0,-29);ctx.restore();}
-function draw(now){
- ctx.clearRect(0,0,width,height);ctx.fillStyle='#091b22';ctx.fillRect(0,0,width,height);
- if(stream&&video.readyState>=2){const{scale,ox,oy}=coverMap(video.videoWidth,video.videoHeight,width,height);ctx.save();ctx.translate(width,0);ctx.scale(-1,1);ctx.drawImage(video,ox,oy,video.videoWidth*scale,video.videoHeight*scale);ctx.restore();ctx.fillStyle='#04121c35';ctx.fillRect(0,0,width,height);}
- else{
-  const gradient=ctx.createRadialGradient(width*.45,height*.4,0,width*.45,height*.4,width*.75);gradient.addColorStop(0,'#163b42');gradient.addColorStop(1,'#07131d');ctx.fillStyle=gradient;ctx.fillRect(0,0,width,height);
-  ctx.fillStyle='#b8f6d22b';for(let x=22;x<width;x+=32)for(let y=22;y<height;y+=32)ctx.fillRect(x,y,1,1);
-  if(!studio.objects.length&&state==='ready'){const t=reduced?0:now/2500;ctx.save();ctx.strokeStyle='#b8f6d250';ctx.shadowColor='#b8f6d2';ctx.shadowBlur=20;ctx.lineWidth=3;ctx.beginPath();for(let i=0;i<180;i++){const x=width*(.07+i/180*.86),y=height*.5+Math.sin(i/19+t)*height*.22; i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();ctx.restore();}
- }
- renderObjects(ctx);
- if(state==='calibration')for(const hand of hands)skeleton(hand.points,'#b8f6d2');
- if(state==='camera'){
-  if(right)skeleton(right.points,'#b8f6d2');if(left)skeleton(left.points,'#dbb6ff');
-  reticle(right,'#b8f6d2',studio.stroke?'РИСУЮ':'ПРАВАЯ');reticle(left,'#dbb6ff',studio.grab?'ДЕРЖУ':'ЛЕВАЯ');
-  if(studio.grab&&left?.visible){ctx.strokeStyle='#dbb6ff90';ctx.setLineDash([4,5]);ctx.lineWidth=1;const p=studio.grab.strokes[0].points[0];ctx.beginPath();ctx.moveTo(left.x,left.y);ctx.lineTo(p.x,p.y);ctx.stroke();ctx.setLineDash([]);}
- }
-}
-function frame(now){
- if(['camera','calibration'].includes(state)){
-  try{detect(now);}catch(error){fail(error);}
-  if(state==='camera'){
-   gestures.step(right,left);
-   ui['right-status'].textContent=`ПРАВАЯ · ${!right?.visible?'НЕ ВИДНА':studio.stroke?'РИСУЕТ':'ГОТОВА'}`;
-   ui['left-status'].textContent=`ЛЕВАЯ · ${!left?.visible?'НЕ ВИДНА':studio.grab?'ДЕРЖИТ':'ГОТОВА'}`;
-   setStatus(studio.grab?'ПЕРЕМЕЩАЙ · РАЗОМКНИ ПАЛЬЦЫ, ЧТОБЫ ОТПУСТИТЬ':studio.stroke?'РИСУЙ · РАЗОМКНИ ПАЛЬЦЫ ДЛЯ ПАУЗЫ':!right?.visible&&!left?.visible?'ПОКАЖИ РУКИ В КАДРЕ':'ПРАВАЯ РИСУЕТ · ЛЕВАЯ ПЕРЕМЕЩАЕТ');
-  }
- }
- draw(now);ui.count.textContent=`РИСУНКОВ: ${studio.objects.length}`;
- if(undoCount!==studio.history.length){undoCount=studio.history.length;ui.undo.disabled=!undoCount||!['demo','camera'].includes(state);}
- if(studio.points>=studio.limit&&['camera','demo'].includes(state)){setStatus('ХОЛСТ ЗАПОЛНЕН · СОХРАНИ PNG И ОЧИСТИ');studio.endStroke();}
- if(now>hintExpiry)ui.hint.hidden=true;requestAnimationFrame(frame);
-}
-function selectTool(next){tool=next;studio.release();for(const [id,name] of [['draw-tool','draw'],['move-tool','move']]){ui[id].classList.toggle('active',tool===name);ui[id].setAttribute('aria-pressed',String(tool===name));}setStatus(tool==='draw'?'РИСУЙ МЫШЬЮ ИЛИ ПАЛЬЦЕМ':'ЗАЖМИ ЛИНИЮ И ПЕРЕТАЩИ РИСУНОК');}
-function position(event){const rect=canvas.getBoundingClientRect();return{x:Math.max(0,Math.min(width,event.clientX-rect.left)),y:Math.max(0,Math.min(height,event.clientY-rect.top))};}
-canvas.addEventListener('pointerdown',event=>{if(state!=='demo'||pointerId!==null)return;pointerId=event.pointerId;canvas.setPointerCapture(pointerId);const p=position(event);if(tool==='draw')studio.startStroke(p);else if(!studio.startGrab(p))hint('Захвати саму линию рисунка.',2);});
-canvas.addEventListener('pointermove',event=>{if(state!=='demo'||event.pointerId!==pointerId)return;const p=position(event);tool==='draw'?studio.addPoint(p):studio.moveGrab(p);});
-function pointerUp(event){if(event.pointerId===pointerId){studio.release();pointerId=null;}}
-canvas.addEventListener('pointerup',pointerUp);canvas.addEventListener('pointercancel',pointerUp);canvas.addEventListener('lostpointercapture',pointerUp);
-ui.start.addEventListener('click',()=>{if(state==='calibration')confirmCalibration();else if(state==='paused')resume();else startCamera();});ui.demo.addEventListener('click',demo);ui['camera-tool'].addEventListener('click',startCamera);ui.stop.addEventListener('click',stop);ui.calibrate.addEventListener('click',calibrate);
-ui['draw-tool'].addEventListener('click',()=>selectTool('draw'));ui['move-tool'].addEventListener('click',()=>selectTool('move'));
-ui['new-object'].addEventListener('click',()=>{gestures.reset();studio.newObject();hint('Следующий штрих — новый рисунок.');});
-ui.undo.addEventListener('click',()=>{gestures.reset();studio.undo();});ui.clear.addEventListener('click',()=>{gestures.reset();studio.clear();hint('Холст очищен. «Отмена» вернёт рисунки.');});
-ui.size.addEventListener('input',()=>{studio.size=Number(ui.size.value);});
-document.querySelectorAll('[data-color]').forEach(button=>button.addEventListener('click',()=>{studio.color=button.dataset.color;document.querySelectorAll('[data-color]').forEach(b=>{const selected=b===button;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected));});}));
-ui.save.addEventListener('click',()=>{
- const output=document.createElement('canvas');output.width=canvas.width;output.height=canvas.height;const context=output.getContext('2d');context.scale(output.width/width,output.height/height);renderObjects(context);
- output.toBlob(blob=>{if(!blob){hint('Не удалось сохранить. Попробуй ещё раз.');return;}const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='efir-drawing.png';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);hint('PNG с прозрачным фоном, без изображения камеры.');},'image/png');
-});
-document.addEventListener('visibilitychange',()=>{if(document.hidden){if(state==='loading')stop();else pause();studio.release();pointerId=null;}});
-window.addEventListener('pagehide',()=>{++session;stopStream();});
-enableTools(false);requestAnimationFrame(frame);
+requestAnimationFrame(frame);
